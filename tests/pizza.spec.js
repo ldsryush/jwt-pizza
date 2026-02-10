@@ -54,8 +54,7 @@ test('docs page loads', async ({ page }) => {
     });
   });
   
-  await page.goto('/');
-  await page.getByRole('link', { name: 'Docs' }).click();
+  await page.goto('/docs');
   await expect(page.locator('h2')).toContainText('JWT Pizza API');
   await expect(page.locator('main')).toContainText('Get the pizza menu');
 });
@@ -116,13 +115,17 @@ test('logout user', async ({ page }) => {
   await page.route('*/**/api/user/me', async (route) => {
     await route.fulfill({ json: { id: 3, name: 'Kai Chen', email: 'd@jwt.com', roles: [{ role: 'diner' }] } });
   });
-  
+
   await page.route('*/**/api/auth', async (route) => {
     if (route.request().method() === 'DELETE') {
       await route.fulfill({ json: { message: 'logout successful' } });
     }
   });
-  
+
+  await page.goto('/');
+  await page.evaluate(() => {
+    localStorage.setItem('token', 'test-token');
+  });
   await page.goto('/');
   await expect(page.getByRole('link', { name: 'KC' })).toBeVisible();
   await page.getByRole('link', { name: 'Logout' }).click();
