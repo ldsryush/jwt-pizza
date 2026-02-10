@@ -16,7 +16,7 @@ test('about page shows content', async ({ page }) => {
   
   await page.goto('/');
   await page.getByRole('link', { name: 'About' }).click();
-  await expect(page.locator('h2')).toContainText('The secret sauce');
+  await expect(page.getByRole('heading', { name: 'The secret sauce' })).toBeVisible();
 });
 
 test('history page shows content', async ({ page }) => {
@@ -145,9 +145,11 @@ test('view menu page', async ({ page }) => {
   
   await page.route('*/**/api/franchise', async (route) => {
     await route.fulfill({
-      json: [
-        { id: 1, name: 'LotaPizza', stores: [{ id: 4, name: 'Lehi' }] },
-      ]
+      json: {
+        franchises: [
+          { id: 1, name: 'LotaPizza', stores: [{ id: 4, name: 'Lehi' }] },
+        ]
+      }
     });
   });
   
@@ -174,9 +176,11 @@ test('order pizza complete flow', async ({ page }) => {
   
   await page.route('*/**/api/franchise', async (route) => {
     await route.fulfill({
-      json: [
-        { id: 1, name: 'LotaPizza', stores: [{ id: 4, name: 'Lehi' }] },
-      ]
+      json: {
+        franchises: [
+          { id: 1, name: 'LotaPizza', stores: [{ id: 4, name: 'Lehi' }] },
+        ]
+      }
     });
   });
   
@@ -322,14 +326,16 @@ test('admin dashboard', async ({ page }) => {
   
   await page.route('*/**/api/franchise', async (route) => {
     await route.fulfill({
-      json: [
-        { 
-          id: 1, 
-          name: 'Franchise 1', 
-          admins: [{ id: 2, name: 'User 1', email: 'u1@jwt.com' }],
-          stores: [{ id: 1, name: 'Store 1' }] 
-        },
-      ]
+      json: {
+        franchises: [
+          { 
+            id: 1, 
+            name: 'Franchise 1', 
+            admins: [{ id: 2, name: 'User 1', email: 'u1@jwt.com' }],
+            stores: [{ id: 1, name: 'Store 1' }] 
+          },
+        ]
+      }
     });
   });
   
@@ -353,7 +359,7 @@ test('create franchise as admin', async ({ page }) => {
   
   await page.route('*/**/api/franchise', async (route) => {
     if (route.request().method() === 'GET') {
-      await route.fulfill({ json: [] });
+      await route.fulfill({ json: { franchises: [] } });
     } else if (route.request().method() === 'POST') {
       const req = route.request().postDataJSON();
       await route.fulfill({
@@ -392,14 +398,16 @@ test('close franchise as admin', async ({ page }) => {
   await page.route('*/**/api/franchise', async (route) => {
     if (route.request().method() === 'GET') {
       await route.fulfill({
-        json: [
-          { 
-            id: 1, 
-            name: 'Franchise to Close', 
-            admins: [{ id: 2, name: 'User 1', email: 'u1@jwt.com' }],
-            stores: [] 
-          },
-        ]
+        json: {
+          franchises: [
+            { 
+              id: 1, 
+              name: 'Franchise to Close', 
+              admins: [{ id: 2, name: 'User 1', email: 'u1@jwt.com' }],
+              stores: [] 
+            },
+          ]
+        }
       });
     }
   });
