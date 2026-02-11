@@ -523,3 +523,48 @@ test('navigate from register to login', async ({ page }) => {
   await page.getByRole('link', { name: 'Login' }).click();
   await expect(page.locator('h2')).toContainText('Welcome back');
 });
+
+test('login shows error message on failure', async ({ page }) => {
+  await page.route('*/**/api/user/me', async (route) => {
+    await route.fulfill({ json: null });
+  });
+  
+  await page.route('*/**/api/auth', async (route) => {
+    if (route.request().method() === 'PUT') {
+      await route.fulfill({ 
+        status: 401,
+        json: { message: 'unauthorized' }
+      });
+    }
+  });
+  
+  await page.goto('/login');
+  await page.getByPlaceholder('Email address').fill('bad@jwt.com');
+  await page.getByPlaceholder('Password').fill('bad');
+  await page.getByRole('button', { name: 'Login' }).click();
+  
+  await expect(page.locator('.text-yellow-200')).toContainText('unauthorized');
+});
+
+test('register shows error message on failure', async ({ page }) => {
+  await page.route('*/**/api/user/me', async (route) => {
+    await route.fulfill({ json: null });
+  });
+  
+  await page.route('*/**/api/auth', async (route) => {
+    if (route.request().method() === 'POST') {
+      await route.fulfill({ 
+        status: 400,
+        json: { message: 'email already in use' }
+      });
+    }
+  });
+  
+  await page.goto('/register');
+  await page.getByPlaceholder('Full name').fill('Test');
+  await page.getByPlaceholder('Email address').fill('existing@jwt.com');
+  await page.getByPlaceholder('Password').fill('pass');
+  await page.getByRole('button', { name: 'Register' }).click();
+  
+  await expect(page.locator('.text-yellow-200')).toContainText('email already in use');
+});
