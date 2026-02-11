@@ -497,3 +497,29 @@ test('menu page checkout button disabled without selection', async ({ page }) =>
   const checkoutButton = page.getByRole('button', { name: 'Checkout' });
   await expect(checkoutButton).toBeDisabled();
 });
+
+test('navigate from login to register', async ({ page }) => {
+  await page.route('*/**/api/user/me', async (route) => {
+    await route.fulfill({ json: null });
+  });
+  
+  await page.goto('/');
+  await page.getByRole('link', { name: 'Login' }).click();
+  await expect(page.locator('h2')).toContainText('Welcome back');
+  
+  await page.getByRole('link', { name: 'Register' }).click();
+  await expect(page.locator('h2')).toContainText('Welcome to the party');
+});
+
+test('navigate from register to login', async ({ page }) => {
+  await page.route('*/**/api/user/me', async (route) => {
+    await route.fulfill({ json: null });
+  });
+  
+  await page.goto('/');
+  await page.getByRole('link', { name: 'Register' }).click();
+  await expect(page.locator('h2')).toContainText('Welcome to the party');
+  
+  await page.getByRole('link', { name: 'Login' }).click();
+  await expect(page.locator('h2')).toContainText('Welcome back');
+});
