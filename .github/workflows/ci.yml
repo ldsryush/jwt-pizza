@@ -46,12 +46,13 @@ jobs:
       - name: Update coverage badge
         if: github.ref == 'refs/heads/main'
         run: |
-          coverage=$(jq '.total.lines.pct' coverage/coverage-summary.json)
+          coverage=$(jq -r '.total.lines.pct' coverage/coverage-summary.json)
+          coverage_rounded=$(printf "%.0f" "$coverage")
           color=$(echo "$coverage < 80" | bc -l | awk '{if ($1) print "red"; else print "green"}')
           curl -X POST "https://pizza-factory.cs329.click/api/badge/${{ secrets.NET_ID }}/jwtpizzacoverage" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${{ secrets.FACTORY_API_KEY }}" \
-            -d "{\"label\":\"Coverage\",\"value\":\"${coverage}%\",\"color\":\"${color}\"}"
+            -d "{\"label\":\"Coverage\",\"value\":\"${coverage_rounded}%\",\"color\":\"${color}\"}"
 
       - name: Build
         run: npm run build && cp dist/index.html dist/404.html
