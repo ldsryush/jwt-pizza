@@ -469,3 +469,31 @@ test('franchisee dashboard displays franchises', async ({ page }) => {
   await expect(page.getByText('Provo')).toBeVisible();
   await expect(page.getByText('100 ₿')).toBeVisible();
 });
+
+test('menu page checkout button disabled without selection', async ({ page }) => {
+  await page.route('*/**/api/user/me', async (route) => {
+    await route.fulfill({ json: null });
+  });
+
+  await page.route('*/**/api/order/menu', async (route) => {
+    await route.fulfill({
+      json: [
+        { id: 1, title: 'Veggie', image: 'pizza1.png', price: 0.0038, description: 'A garden of delight' },
+      ]
+    });
+  });
+
+  await page.route('*/**/api/franchise', async (route) => {
+    await route.fulfill({
+      json: [
+        { id: 1, name: 'LotaPizza', stores: [{ id: 4, name: 'Lehi' }] },
+      ]
+    });
+  });
+
+  await page.goto('/menu');
+  await expect(page.locator('h2')).toContainText('Awesome is a click away');
+  
+  const checkoutButton = page.getByRole('button', { name: 'Checkout' });
+  await expect(checkoutButton).toBeDisabled();
+});
