@@ -348,9 +348,12 @@ test('navigate to order page from home', async ({ page }) => {
   
   await page.route('*/**/api/franchise', async (route) => {
     await route.fulfill({
-      json: [
-        { id: 1, name: 'LotaPizza', stores: [{ id: 4, name: 'Lehi' }] },
-      ]
+      json: {
+        franchises: [
+          { id: 1, name: 'LotaPizza', stores: [{ id: 4, name: 'Lehi' }] },
+        ],
+        more: false,
+      }
     });
   });
   
@@ -378,9 +381,12 @@ test('checkout flow', async ({ page }) => {
 
   await page.route('*/**/api/franchise', async (route) => {
     await route.fulfill({
-      json: [
-        { id: 1, name: 'LotaPizza', stores: [{ id: 4, name: 'Lehi' }] },
-      ]
+      json: {
+        franchises: [
+          { id: 1, name: 'LotaPizza', stores: [{ id: 4, name: 'Lehi' }] },
+        ],
+        more: false,
+      }
     });
   });
 
@@ -411,9 +417,7 @@ test('checkout flow', async ({ page }) => {
   
   const select = page.locator('select');
   await expect(select).toBeVisible(); 
-  await page.waitForResponse((response) => response.url().includes('/api/franchise') && response.status() === 200);
-
-  // Wait for option to be populated
+  // Wait for store option to be populated
   await expect(page.locator('option[value="4"]')).toBeVisible();
 
   await select.selectOption('4');
@@ -447,9 +451,12 @@ test('payment failure', async ({ page }) => {
 
   await page.route('*/**/api/franchise', async (route) => {
     await route.fulfill({
-      json: [
-        { id: 1, name: 'LotaPizza', stores: [{ id: 4, name: 'Lehi' }] },
-      ]
+      json: {
+        franchises: [
+          { id: 1, name: 'LotaPizza', stores: [{ id: 4, name: 'Lehi' }] },
+        ],
+        more: false,
+      }
     });
   });
 
@@ -470,7 +477,7 @@ test('payment failure', async ({ page }) => {
   await page.getByRole('link', { name: 'Order' }).click();
   await expect(page.locator('h2')).toContainText('Awesome is a click away');
 
-  await page.waitForResponse((response) => response.url().includes('/api/franchise') && response.status() === 200);
+  await expect(page.locator('select')).toBeVisible();
   await expect(page.locator('option[value="4"]')).toBeVisible();
 
   await page.locator('select').selectOption('4');
@@ -491,14 +498,17 @@ test('admin dashboard', async ({ page }) => {
   await page.route('*/**/api/franchise', async (route) => {
     if (route.request().method() === 'GET') {
       await route.fulfill({
-        json: [
-          {
-            id: 1,
-            name: 'LotaPizza',
-            admins: [{ name: 'Admin', email: 'a@jwt.com' }],
-            stores: [{ id: 4, name: 'Lehi', totalRevenue: 100 }]
-          }
-        ]
+        json: {
+          franchises: [
+            {
+              id: 1,
+              name: 'LotaPizza',
+              admins: [{ name: 'Admin', email: 'a@jwt.com' }],
+              stores: [{ id: 4, name: 'Lehi', totalRevenue: 100 }]
+            }
+          ],
+          more: false,
+        }
       });
     }
   });
@@ -523,7 +533,7 @@ test('create franchise', async ({ page }) => {
 
   await page.route('*/**/api/franchise', async (route) => {
     if (route.request().method() === 'GET') {
-      await route.fulfill({ json: [] });
+      await route.fulfill({ json: { franchises: [], more: false } });
     } else if (route.request().method() === 'POST') {
       await route.fulfill({
         json: { id: 2, name: 'NewPizza', admins: [{ email: 'new@jwt.com' }], stores: [] }
@@ -555,9 +565,12 @@ test('close franchise', async ({ page }) => {
 
   await page.route('*/**/api/franchise', async (route) => {
       await route.fulfill({
-        json: [
-          { id: 1, name: 'LotaPizza', admins: [{ name: 'Admin', email: 'a@jwt.com' }], stores: [] }
-        ]
+        json: {
+          franchises: [
+            { id: 1, name: 'LotaPizza', admins: [{ name: 'Admin', email: 'a@jwt.com' }], stores: [] }
+          ],
+          more: false,
+        }
       });
   });
 
@@ -590,9 +603,12 @@ test('close store', async ({ page }) => {
 
   await page.route('*/**/api/franchise', async (route) => {
       await route.fulfill({
-        json: [
-          { id: 1, name: 'LotaPizza', admins: [{ name: 'Admin', email: 'a@jwt.com' }], stores: [{ id: 4, name: 'Lehi', totalRevenue: 100 }] }
-        ]
+        json: {
+          franchises: [
+            { id: 1, name: 'LotaPizza', admins: [{ name: 'Admin', email: 'a@jwt.com' }], stores: [{ id: 4, name: 'Lehi', totalRevenue: 100 }] }
+          ],
+          more: false,
+        }
       });
   });
 
@@ -669,12 +685,53 @@ test('delivery page with invalid jwt verification', async ({ page }) => {
     });
   });
 
-  await page.goto('/delivery', { 
-    state: { 
-      order: { id: 1, items: [{ menuId: 1, description: 'Veggie', price: 0.0038 }], franchiseId: 1, storeId: 4 }, 
-      jwt: 'invalid-jwt' 
-    } 
+  await page.route('*/**/api/order/menu', async (route) => {
+    await route.fulfill({
+      json: [
+        { id: 1, title: 'Veggie', image: 'pizza1.png', price: 0.0038, description: 'A garden of delight' },
+      ]
+    });
   });
+
+  await page.route('*/**/api/franchise', async (route) => {
+    await route.fulfill({
+      json: {
+        franchises: [
+          { id: 1, name: 'LotaPizza', stores: [{ id: 4, name: 'Lehi' }] },
+        ],
+        more: false,
+      }
+    });
+  });
+
+  await page.route('*/**/api/order', async (route) => {
+    if (route.request().method() === 'POST') {
+      await route.fulfill({
+        json: {
+          order: { id: 1, items: [{ menuId: 1, description: 'Veggie', price: 0.0038 }], franchiseId: 1, storeId: 4 },
+          jwt: 'invalid-jwt',
+        }
+      });
+    }
+  });
+
+  await page.goto('/');
+  await page.evaluate(() => {
+    localStorage.setItem('token', 'test-token');
+  });
+
+  await page.getByRole('link', { name: 'Order' }).click();
+  await expect(page.locator('h2')).toContainText('Awesome is a click away');
+
+  await expect(page.locator('select')).toBeVisible();
+  await expect(page.locator('option[value="4"]')).toBeVisible();
+  await page.locator('select').selectOption('4');
+
+  await page.getByRole('button', { name: 'Veggie' }).click();
+  await page.getByRole('button', { name: 'Checkout' }).click();
+
+  await expect(page.locator('h2')).toContainText('So worth it');
+  await page.getByRole('button', { name: 'Pay now' }).click();
 
   await expect(page.locator('h2')).toContainText('Here is your JWT Pizza!');
   await expect(page.getByText('invalid-jwt')).toBeVisible();
@@ -695,12 +752,34 @@ test('delivery page order more button', async ({ page }) => {
     await route.fulfill({ json: [] });
   });
 
-  await page.goto('/delivery', { 
-    state: { 
-      order: { id: 1, items: [{ menuId: 1, description: 'Veggie', price: 0.0038 }], franchiseId: 1, storeId: 4 }, 
-      jwt: 'test-jwt' 
-    } 
+  await page.route('*/**/api/order/menu', async (route) => {
+    await route.fulfill({
+      json: [
+        { id: 1, title: 'Veggie', image: 'pizza1.png', price: 0.0038, description: 'A garden of delight' },
+      ]
+    });
   });
+
+  await page.route('*/**/api/franchise', async (route) => {
+    await route.fulfill({
+      json: {
+        franchises: [
+          { id: 1, name: 'LotaPizza', stores: [{ id: 4, name: 'Lehi' }] },
+        ],
+        more: false,
+      }
+    });
+  });
+
+  await page.goto('/');
+  await page.evaluate(() => {
+    localStorage.setItem('token', 'test-token');
+  });
+
+  await page.getByRole('link', { name: 'Order' }).click();
+  await page.locator('select').selectOption('4');
+  await page.getByRole('button', { name: 'Veggie' }).click();
+  await page.getByRole('button', { name: 'Checkout' }).click();
 
   await page.getByRole('button', { name: 'Order more' }).click();
   await expect(page.locator('h2')).toContainText('Awesome is a click away');
@@ -711,16 +790,37 @@ test('payment page with multiple pizzas', async ({ page }) => {
     await route.fulfill({ json: { id: 3, name: 'Kai Chen', email: 'd@jwt.com', roles: [{ role: 'diner' }] } });
   });
 
-  const order = {
-    items: [
-      { menuId: 1, description: 'Veggie', price: 0.0038 },
-      { menuId: 2, description: 'Pepperoni', price: 0.0042 }
-    ],
-    storeId: 4,
-    franchiseId: 1
-  };
+  await page.route('*/**/api/order/menu', async (route) => {
+    await route.fulfill({
+      json: [
+        { id: 1, title: 'Veggie', image: 'pizza1.png', price: 0.0038, description: 'A garden of delight' },
+        { id: 2, title: 'Pepperoni', image: 'pizza2.png', price: 0.0042, description: 'Spicy treat' },
+      ]
+    });
+  });
 
-  await page.goto('/payment', { state: { order } });
+  await page.route('*/**/api/franchise', async (route) => {
+    await route.fulfill({
+      json: {
+        franchises: [
+          { id: 1, name: 'LotaPizza', stores: [{ id: 4, name: 'Lehi' }] },
+        ],
+        more: false,
+      }
+    });
+  });
+
+  await page.goto('/');
+  await page.evaluate(() => {
+    localStorage.setItem('token', 'test-token');
+  });
+
+  await page.getByRole('link', { name: 'Order' }).click();
+  await page.locator('select').selectOption('4');
+  await page.getByRole('button', { name: 'Veggie' }).click();
+  await page.getByRole('button', { name: 'Pepperoni' }).click();
+  await page.getByRole('button', { name: 'Checkout' }).click();
+
   await expect(page.locator('h2')).toContainText('So worth it');
   await expect(page.getByText('Send me those 2 pizzas right now!')).toBeVisible();
   await expect(page.getByText('Veggie')).toBeVisible();
@@ -733,20 +833,34 @@ test('payment page cancel button', async ({ page }) => {
   });
 
   await page.route('*/**/api/order/menu', async (route) => {
-    await route.fulfill({ json: [] });
+    await route.fulfill({
+      json: [
+        { id: 1, title: 'Veggie', image: 'pizza1.png', price: 0.0038, description: 'A garden of delight' },
+      ]
+    });
   });
 
   await page.route('*/**/api/franchise', async (route) => {
-    await route.fulfill({ json: [] });
+    await route.fulfill({
+      json: {
+        franchises: [
+          { id: 1, name: 'LotaPizza', stores: [{ id: 4, name: 'Lehi' }] },
+        ],
+        more: false,
+      }
+    });
   });
 
-  const order = {
-    items: [{ menuId: 1, description: 'Veggie', price: 0.0038 }],
-    storeId: 4,
-    franchiseId: 1
-  };
+  await page.goto('/');
+  await page.evaluate(() => {
+    localStorage.setItem('token', 'test-token');
+  });
 
-  await page.goto('/payment', { state: { order } });
+  await page.getByRole('link', { name: 'Order' }).click();
+  await page.locator('select').selectOption('4');
+  await page.getByRole('button', { name: 'Veggie' }).click();
+  await page.getByRole('button', { name: 'Checkout' }).click();
+
   await page.getByRole('button', { name: 'Cancel' }).click();
   await expect(page.locator('h2')).toContainText('Awesome is a click away');
 });
@@ -819,7 +933,7 @@ test('menu page adds multiple pizzas', async ({ page }) => {
 
   await page.goto('/menu');
   
-  await page.waitForResponse((response) => response.url().includes('/api/franchise') && response.status() === 200);
+  await expect(page.locator('select')).toBeVisible();
   await expect(page.locator('option[value="4"]')).toBeVisible();
   
   await page.locator('select').selectOption('4');
@@ -883,9 +997,12 @@ test('close franchise cancel button', async ({ page }) => {
 
   await page.route('*/**/api/franchise', async (route) => {
     await route.fulfill({
-      json: [
-        { id: 1, name: 'LotaPizza', admins: [{ name: 'Admin', email: 'a@jwt.com' }], stores: [] }
-      ]
+      json: {
+        franchises: [
+          { id: 1, name: 'LotaPizza', admins: [{ name: 'Admin', email: 'a@jwt.com' }], stores: [] }
+        ],
+        more: false,
+      }
     });
   });
 
@@ -910,9 +1027,12 @@ test('close store cancel button', async ({ page }) => {
 
   await page.route('*/**/api/franchise', async (route) => {
     await route.fulfill({
-      json: [
-        { id: 1, name: 'LotaPizza', admins: [{ name: 'Admin', email: 'a@jwt.com' }], stores: [{ id: 4, name: 'Lehi', totalRevenue: 100 }] }
-      ]
+      json: {
+        franchises: [
+          { id: 1, name: 'LotaPizza', admins: [{ name: 'Admin', email: 'a@jwt.com' }], stores: [{ id: 4, name: 'Lehi', totalRevenue: 100 }] }
+        ],
+        more: false,
+      }
     });
   });
 
