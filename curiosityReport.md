@@ -18,29 +18,29 @@ header.payload.signature
 - **Payload** — contains the claims (e.g., `userId`, `role`, `exp`)
 - **Signature** — cryptographic proof that the header and payload haven't been tampered with
 
-The critical thing to understand: JWTs are **not encrypted by default**. Anyone can decode and read the payload. The signature only guarantees integrity, not confidentiality and this is where most vulnerabilities stem from.
+JWTs are **not encrypted by default**. Anyone can decode and read the payload. The signature only guarantees integrity not confidentiality and this is where most vulnerabilities stem from.
 
 ## Common Attack Vectors
 
 ### 1. The `"alg": "none"` Bypass
-The JWT spec originally required libraries to support a `none` algorithm for already-verified tokens. Some libraries treated it as always valid. An attacker can take a real token, set `"alg": "none"`, change their role to `admin`, strip the signature, and send it. If the server doesn't reject `none`, the attacker is in.
+The JWT spec originally required libraries to support a none algorithm for already verified tokens. Some libraries treated it as always valid. An attacker can take a real token, set "alg": "none", change their role to admin, strip the signature, and send it. If the server doesn't reject none, the attacker is in.
 
-**Fix:** Whitelist allowed algorithms server-side. Never trust the `alg` field from the token.
+**Fix:** Whitelist allowed algorithms server-side. Never trust the alg field from the token.
 
 ### 2. Algorithm Confusion (RS256 → HS256)
-RS256 uses a private key to sign and a public key to verify. HS256 uses the same key for both. If the server trusts the token's `alg` field, an attacker can switch it to `HS256` and re-sign the token using the server's **public key** as the HMAC secret. The server verifies it successfully and is completely bypassed.
+RS256 uses a private key to sign and a public key to verify. HS256 uses the same key for both. If the server trusts the token's alg field, an attacker can switch it to HS256 and re-sign the token using the server's **public key** as the HMAC secret. The server verifies it successfully and is completely bypassed.
 
 **Fix:** Enforce a fixed algorithm on the server. Never let the token header dictate verification method.
 
 ### 3. Weak Secret Brute Force
-HS256 tokens are only as secure as their secret. An attacker with a captured token already has the algorithm, payload, and signature — enough to run an offline attack with tools like `hashcat`. If the secret is `password` or `secret`, it falls in seconds.
+HS256 tokens are only as secure as their secret. An attacker with a captured token already has the algorithm, payload, and signature. Enough to run an offline attack with tools like hashcat. If the secret is password or secret, it falls in seconds.
 
-**Fix:** Use secrets that are 64+ characters, randomly generated, and never human-readable words.
+**Fix:** Use secrets that are 64+ characters, randomly generated, and never readable words.
 
 ### 4. Signature Not Verified At All
-Some developers accidentally use a `decode()` function instead of a `verify()` function. The server reads the payload and trusts it completely — no signature check happens. An attacker can change anything in the token and the server accepts it.
+Some developers accidentally use a decode() function instead of a `verify()` function. The server reads the payload and trusts it completely. No signature check happens. An attacker can change anything in the token and the server accepts it.
 
-**Fix:** Always call `verify()`, not `decode()`. Check the docs for whichever library you use.
+**Fix:** Always call verify(), not decode().
 
 ### 5. Missing Claim Validation
 JWTs have standard claims that limit a token's scope:
@@ -53,26 +53,26 @@ JWTs have standard claims that limit a token's scope:
 
 Skipping these checks means stolen tokens never expire and can be replayed across services.
 
-**Fix:** Always validate `exp`, `iss`, and `aud` on every request.
+**Fix:** Always validate exp, iss, and aud on every request.
 
 ## Experimentation — Manually Crafting Attacks
 
 To go beyond reading about these vulnerabilities, I recreated several of them manually using [jwt.io](https://jwt.io) and a small Node.js script to see how a real server would respond.
 
 ### `alg: none` Test
-Starting with a valid token from jwt-pizza, I decoded the header and payload using jwt.io, changed the algorithm field to `"none"`, modified the `role` claim to `"admin"`, removed the signature, and reassembled the token manually:
+Starting with a valid token from jwt-pizza, I decoded the header and payload using jwt.io, changed the algorithm field to "none", modified the role claim to "admin", removed the signature, and reassembled the token manually:
 
 ```
 eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJ1c2VySWQiOjEsInJvbGUiOiJhZG1pbiJ9.
 ```
 
-Sending this to an endpoint that used `jsonwebtoken`'s `verify()` with a hardcoded algorithm threw an error and rejected the token. This confirmed that locking down the algorithm server-side works exactly as described.
+Sending this to an endpoint that used jsonwebtoken's verify() with a hardcoded algorithm threw an error and rejected the token. This confirmed that locking down the algorithm server-side works exactly as described.
 
 ### Expired Token Test
-I manually set the `exp` claim to a timestamp in the past and re-signed the token with the correct secret. A server calling `verify()` with default options rejected it immediately with a `TokenExpiredError`. A server calling `decode()` instead accepted it without complaint, demonstrating exactly how dangerous skipping verification is.
+I manually set the exp claim to a timestamp in the past and re-signed the token with the correct secret. A server calling verify() with default options rejected it immediately with a TokenExpiredError. A server calling decode() instead accepted it without complaint, demonstrating exactly how dangerous skipping verification is.
 
 ```js
-// Dangerous — never do this
+// Dangerous — shouldn't do this
 const payload = jwt.decode(token); // No signature or expiry check
 
 // Correct
@@ -109,7 +109,7 @@ test('rejects token with modified payload', async () => {
 });
 ```
 
-Without these tests, my CI/CD pipeline is only verifying that valid tokens work, not that invalid ones are rejected. That's a false sense of security that mutation testing would be exposed immediately.
+Without these tests, my CI/CD pipeline is only verifying that valid tokens work, not that invalid ones are rejected.
 
 ### DevOps Considerations
 
