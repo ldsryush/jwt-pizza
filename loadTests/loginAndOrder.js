@@ -9,8 +9,7 @@ export const options = {
   ],
 };
 
-// Replace BASE_URL with your actual pizza service domain before running
-const BASE_URL = 'https://pizza-service.cs329.click';
+const BASE_URL = 'https://pizza-service.pizzasanghwa.click';
 const FACTORY_URL = 'https://pizza-factory.cs329.click';
 
 export default function () {
